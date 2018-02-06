@@ -1,0 +1,32 @@
+[include top]
+<H1>Welcome to Tried, Tested and True Recipe ! </H1>
+
+<P>
+If you just tried a great recipe .. why not share it ?
+</P>
+
+<H2>All of our recipes are actual favourite recipes that are tried at homes
+of real people.</H2>
+
+Check out the many reasons why you should use this web site, in our 
+<A HREF=/cgi-bin/tools/content.cgi?content=todo.html>Coming Soon</A> page.
+
+
+[perl]
+## Only if not logged in
+   push(@INC, 'cgi-bin');
+   require CGI::Login;
+   if (CGI::Login::verify($main::q) == 0)
+   {
+      my $html = <<HTML;
+<P>
+<A HREF=/cgi-bin/tools/content.cgi?content=login.html&register=now>Register</A> with
+TTTR and you will enjoy many more features 
+such as the Home Maker Tools, that will be available soon.
+</P>
+HTML
+      print $html;
+   }
+[/perl]
+
+[include bottom]

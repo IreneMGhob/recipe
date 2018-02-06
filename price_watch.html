@@ -1,0 +1,76 @@
+[include top]
+
+
+<FORM>
+[perl]
+
+#######
+## Main
+#######
+
+   if ($main::q->param('action') eq 'Search' || $main::q->param('search'))
+   {
+      if (!$main::q->param('search'))
+      {
+         print "<BR><H1>No product specified.</H1>";
+      }
+      else
+      {
+         push(@INC, 'cgi-bin');
+         require FoodDB;
+         require DB::Product;
+         DB::Product::setDB($FoodDB::dbh);
+         ## if product is '*' then get all
+         my %product;
+         $product{'name'} = $main::q->param('search')
+            if $main::q->param('search') ne '*';
+         my $rproducts = DB::Product::get(%product);
+         if (keys (%$rproducts) == 0)
+         {
+            print '<BR><H1>No products found for \'' .
+                  $main::q->param('search') . '\'.</H1>';
+         }
+         else
+         {
+            require CGI::Product;
+            CGI::Product::setDB($FoodDB::dbh);
+            my $upc;
+            my $html = '<H1>Prices for Products Matching \'' .
+                       $main::q->param('search') . '\'</H1>';
+            $html .= '<TABLE BORDER=1>';
+            CGI::Product::cgi_object($main::q);
+            $html .= '<TR>' . "\n";
+            $html .= CGI::Product::prodHTML(undef, undef, undef, undef, 1);
+            $html .= '</TR>' . "\n";
+            foreach $upc (sort keys %$rproducts)
+            {
+               $html .= '<TR>' . "\n";
+               my($rprice);
+               $$rprice{'UPC'} = $upc;
+               $rprice = DB::Price::get($rprice);
+               $html .= CGI::Product::prodHTML($$rproducts{$upc}, $rprice,
+                                               0, 1);
+               $html .= '</TR>' . "\n";
+            }
+            $html .= '</TABLE>';
+            print $html;
+         }
+      }
+
+   }
+   else
+   {
+      print '<H1>Search for a price of products sold in Calgary, AB</H1>';
+      print "Search for product : <INPUT TYPE=text NAME=search>\n";
+      print "<INPUT TYPE=submit NAME=action VALUE=Search>\n";
+      print "<INPUT TYPE=hidden NAME=content VALUE=price_watch.html>\n";
+   }
+[/perl]
+</FORM>
+
+[include bottom]
+   }
+[/perl]
+</FORM>
+
+[include bottom]

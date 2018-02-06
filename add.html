@@ -1,0 +1,300 @@
+[include top]
+
+[perl]
+push(@INC, 'cgi-bin');
+require CGI::Login;
+$main::loginOK = CGI::Login::verify($main::q);
+[/perl]
+
+<SCRIPT LANGUAGE="Javascript">
+
+[perl]
+$main::ingCount = 20;
+## write a js var for ingCount
+print('ingCount = ' . $main::ingCount . ';');
+[/perl]
+
+function validate()
+{
+   f = document.recipe;
+   ok = false;
+   if (!f.name.value)
+      alert('Please enter a recipe name.');
+   else if (!f.step1.value)
+      alert('Please enter at least one step.');
+   else if (!f.qty0.value || !f.ing0.value)
+      alert('Please enter at least one ingredient.');
+   else
+      ok = true;
+   // if all is ok so far then check that for every ingredient there
+   // is a quantity
+   if (ok)
+   {
+      i=1;
+      while (i<ingCount && ok)
+      {
+         ok = false;
+         if (eval('f.qty' + i + '.value') && eval('!f.ing' + i + '.value'))
+            alert('You have specified a quantity without an ingredient.' +
+                  ' Please correct.');
+         else if (eval('!f.qty' + i + '.value') && eval('f.ing' + i + '.value'))
+            alert('You have specified an ingredient without a quantity.' +
+                  ' Please correct.');
+         else
+            ok = true;
+         i++;
+      }
+   }
+   return ok;
+}
+
+
+// fills this field w/text from previous section field (if any)
+function fillSection(i)
+{
+   if (i > 0)
+   {
+      prev = eval('document.recipe.sec' + (i-1) + '.value');
+      thisField = eval('document.recipe.sec' + i);
+      thisField.value = eval('document.recipe.sec' + (i-1) + '.value');
+   }
+}
+
+</SCRIPT>
+<H1>Add a Recipe</H1>
+
+[perl]
+
+   # just use the CGI Recipe handling package to handle request
+   push(@INC, 'cgi-bin');
+   require FoodCGI::Recipe;
+   if ($main::loginOK)
+   {
+      $main::html = FoodCGI::Recipe::handleRecipeRequest($main::q);
+
+   if ($main::html eq '')
+   {
+      push(@INC, 'cgi-bin');
+      require FoodDB::Recipe;
+$main::formHTML = <<'EOF_HTML';
+
+<FORM NAME="recipe" ACTION="/cgi-bin/tools/content.cgi" METHOD="post" onSubmit="return validate()" enctype="multipart/form-data">
+<TABLE border=0 CELLSPACING=0>
+
+<TR>
+<TD COLSPAN=2><H2>Recipe Name :</H2> </TD>
+</TR><TR>
+<TD><INPUT TYPE="text" NAME="name" SIZE=40></TD>
+</TR>
+
+<TR><TD COLSPAN=2>&nbsp</TD></TR>
+
+<TR><TD COLSPAN=2><H2>Categories :</H2></TD></TR>
+<TR><TD COLSPAN=2>
+EOF_HTML
+
+      $main::formHTML .= FoodCGI::Recipe::recipeCategorySelectHTML(5);
+
+$main::formHTML .= <<'EOF_HTML1';
+</TD></TR>
+<TR><TD COLSPAN=2>&nbsp</TD></TR>
+
+<TR>
+<TD COLSPAN=2><H2>Recipe Description : </H2></TD>
+</TR><TR>
+<TD COLSPAN=2><TEXTAREA ROWS=3 COLS=70 NAME="desc"></TEXTAREA></TD>
+</TR>
+
+<TR><TD COLSPAN=2>&nbsp</TD></TR>
+
+<TR>
+<TD COLSPAN=2><H2>Ingredients :</H2>
+<P CLASS=small>Use the 'Section' field to enter groups of ingredients
+e.g. for pies, one section would be titled 'Crust' and the other is 'Filling'.
+</P> 
+<P CLASS=small>Please input ONLY the ingredient in the ingredient field
+and NOT its description.
+Use the ingredient description field to describe the ingredient.
+E.g. if a recipe has a finely chopped onion, then input 'onion' in the
+ingredient field and 'finely chopped' in the description field.
+Doing so will make our searches faster and more exact.
+</TD>
+</TR>
+
+<TR>
+<TD COLSPAN=2>
+
+<TABLE>
+<TR>
+<TH>Section</TH>
+<TH>Quantity</TH>
+<TH>Unit</TH>
+<TH>Ingredient</TH>
+<TH>Description</TH>
+</TR>
+EOF_HTML1
+
+
+      require DB::Unit;
+      DB::Unit::setDB($FoodDB::dbh);
+      my $runits = DB::Unit::get();
+      my ($unitHTML, $u);
+      foreach $u (keys %$runits)
+      {
+         $unitHTML .= '<OPTION VALUE=' . $u . '>' . $$runits{$u} . "\n";
+      }
+      my $ing_count = $main::ingCount;
+      $ing_count = $main::q->param('ing_count') if $main::q->param('ing_count');
+
+      my $i;
+      for ($i=0; $i<$ing_count; $i++)
+      {
+         $main::formHTML .= '<TR><TD>';
+         $main::formHTML .= '<INPUT TYPE="text" NAME="sec' . $i . '" SIZE=7 ' .
+                      'onFocus="fillSection(' . $i . ')">' . "\n";
+         $main::formHTML .= '</TD><TD>';
+         $main::formHTML .= '<INPUT TYPE="text" NAME="qty' . $i . '" SIZE=3>' . "\n";
+         $main::formHTML .= '</TD><TD>';
+         $main::formHTML .= '<SELECT NAME=unit' . $i . '>' . "\n";
+         $main::formHTML .= $unitHTML;
+         $main::formHTML .= '</SELECT>' . "\n";
+         $main::formHTML .= '</TD><TD>';
+         $main::formHTML .= '<INPUT TYPE="text" NAME="ing' . $i . '" SIZE=35>';
+         $main::formHTML .= '</TD><TD>';
+         $main::formHTML .= '<INPUT TYPE="text" NAME="ing_desc' . $i . '" SIZE=25>';
+         $main::formHTML .= '</TD></TR>';
+      }
+      print $main::formHTML;
+   }
+   else
+   {
+      print $main::html;
+   }
+   }
+   else
+   {
+      print '<H2>You need to <A HREF=/cgi-bin/tools/content.cgi?content=login.html&login=now>logon or register</A> before you can add a Recipe.</H2>';
+ 
+   }
+   
+[/perl]
+</TR>
+</TABLE>
+</TD>
+</TR>
+
+
+[perl]
+   if ($main::loginOK && $main::html eq '')
+   {
+      my $step_def_count = 10;
+      my $step_count = $step_def_count; # default to 10 steps
+      my $ing_count = $main::q->param('step_count')
+         if $main::q->param('step_count');
+      print '<TR><TD COLSPAN=2>&nbsp</TD></TR>';
+      print '<TR><TD COLSPAN=2><H2>Steps</H2></TD></TR>';
+      print '<TR><TD COLSPAN=2><TABLE>';
+      my $i;
+      for ($i=1; $i<=$step_count; $i++)
+      {
+         print '<TR><TD>' . $i . '.</TD><TD>' .
+               '<INPUT TYPE="text" NAME="step' .
+               $i . '" SIZE=100></TD></TR>' . "\n";
+      }
+      print '</TABLE></TD></TR>';
+
+$main::formHTML = <<'EOF_HTML';
+</TD>
+</TR>
+
+<TR><TD COLSPAN=2>&nbsp</TD></TR>
+
+<TR>
+<TD COLSPAN=2>
+<H2>Nutritional Value (per yield) :</H2>
+</TD>
+</TR>
+
+<TR>
+<TD COLSPAN=2>
+Yields : <INPUT TYPE="text" NAME="yield" SIZE=3>
+<INPUT TYPE="text" NAME="yieldUnit" SIZE=9> e.g. Serving or Slices
+</TD>
+</TR>
+
+<TR>
+<TD>
+<TABLE>
+<TR>
+<TD>Calories :</TD><TD> <INPUT TYPE="text" NAME="calories" SIZE=3></TD>
+</TR>
+<TR>
+<TD>Cholestrol :</TD><TD><INPUT TYPE="text" NAME="cholestrol" SIZE=3> mg</TD>
+</TR>
+<TR>
+<TD>Fat :</TD><TD><INPUT TYPE="text" NAME="fat" SIZE=3> g</TD>
+</TR>
+<TR>
+<TD>Saturated Fat :</TD><TD><INPUT TYPE="text" NAME="saturatedFat" SIZE=3> g</TD>
+</TR>
+</TABLE>
+</TD>
+<TD>
+<TABLE>
+<TR>
+<TD>Sodium :</TD><TD><INPUT TYPE="text" NAME="sodium" SIZE=3> mg</TD>
+</TR>
+<TR>
+<TD>Carbohydrate :</TD><TD><INPUT TYPE="text" NAME="carb" SIZE=3> g</TD>
+</TR>
+<TR>
+<TD>Fiber :</TD><TD><INPUT TYPE="text" NAME="fiber" SIZE=3> g</TD>
+</TR>
+<TR>
+<TD>Protein :</TD><TD><INPUT TYPE="text" NAME="protein" SIZE=3> g</TD>
+</TR>
+</TABLE>
+</TD>
+</TR>
+
+
+<TR><TD COLSPAN=2>&nbsp</TD></TR>
+
+<TR><TD COLSPAN=2><H2>Other:</H2></TD></TR>
+<TR>
+<TD>
+Preparation Time : <INPUT TYPE="text" NAME="prepTime" SIZE=3> minutes
+</TD>
+<TD ROWSPAN=2>
+Upload Picture : <input type="file" name="picture"  size="40">
+</TD>
+</TR>
+<TR>
+<TD>
+Cooking Time : <INPUT TYPE="text" NAME="cookingTime" SIZE=3> minutes
+</TD>
+</TR>
+
+<TR>
+<TD COLSPAN=2>
+Source : <INPUT TYPE="text" NAME="source" SIZE=30>
+</TD>
+</TR>
+
+<TR>
+<TD COLSPAN=2>
+Country : <INPUT TYPE="text" NAME="country" SIZE=30>
+</TD>
+</TR>
+
+</TABLE>
+<INPUT TYPE="submit" NAME="add_recipe" VALUE="Add Recipe">
+<INPUT TYPE="hidden" NAME="content" VALUE="add.html">
+</FORM>
+EOF_HTML
+      print $main::formHTML;
+   }
+
+[/perl]
+
+[include bottom]

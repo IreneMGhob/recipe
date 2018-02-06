@@ -1,0 +1,18 @@
+[include top]
+
+
+<TABLE border=1 WIDTH=100% CELLPADDING=10>
+
+[perl]
+
+   push(@INC, './cgi-bin');
+   require FoodCGI::Recipe;
+   $main::html = FoodCGI::Recipe::handleRecipeRequest($main::q, 'recipe');
+
+   print $main::html;
+
+[/perl]
+
+</TABLE>
+
+[include bottom]

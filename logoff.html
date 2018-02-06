@@ -1,0 +1,9 @@
+[perl]
+      push(@INC, 'cgi-bin');
+      require CGI::Login;
+      CGI::Login::logoff($main::q);
+[/perl]
+
+<HEAD>
+   <META HTTP-EQUIV="Refresh" CONTENT="0;URL=/cgi-bin/tools/content.cgi?content=bye.html">
+</HEAD>

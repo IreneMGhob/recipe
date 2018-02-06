@@ -1,0 +1,17 @@
+[perl]
+   push(@INC, 'cgi-bin');
+   require FoodDB;
+   require CGI::Login;
+   CGI::Login::setDB($FoodDB::dbh);
+   ## This needs to be done in the header .. before we include top
+   ## for login it may require writing login cookie
+   ## in this case there is not need to print the header ourselves
+   $main::html = CGI::Login::handleLoginRequest($main::q, 'header');
+[/perl]
+
+[include top]
+[perl]
+   $main::html .= CGI::Login::handleLoginRequest($main::q);
+   print $main::html;
+[/perl]
+[include bottom]

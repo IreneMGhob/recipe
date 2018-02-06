@@ -1,0 +1,43 @@
+<HTML>
+<HEAD>
+<TITLE>Tried Tested and True Recipe</TITLE>
+   <LINK href="/recipe.css"
+         rel="stylesheet" type="text/css"></LINK>
+   <SCRIPT LANGUAGE="JavaScript" SRC=/config.js></SCRIPT>
+</HEAD>
+
+<BODY>
+<CENTER>
+<TABLE border=0 CELLPADDING=0 CELLSPACING=0 WIDTH=800>
+<TR><TD COLSPAN=2 ALIGN=right><IMG SRC=/grfx/logo3.jpg><TD></TR>
+<TR CLASS=menu>
+<TD>
+&nbsp<A CLASS=menu HREF=/cgi-bin/tools/content.cgi?content=search.html>Find a Recipe</A>
+[perl]
+push(@INC, 'cgi-bin');
+require CGI::Login;
+require FoodDB;
+CGI::Login::setDB($FoodDB::dbh);
+if (CGI::Login::verify($main::q))
+{
+   print '<A CLASS=menu HREF=/cgi-bin/tools/content.cgi?content=add.html>Add a Recipe</A>';
+   print '</TD><TD ALIGN=right>';
+   print '<A CLASS=menu HREF=/cgi-bin/tools/content.cgi?content=logoff.html>Log Off</A>';
+}
+else
+{
+   print '</TD><TD ALIGN=right>';
+   print '<A CLASS=menu HREF=/cgi-bin/tools/content.cgi?content=login.html&login=now>Login</A>';
+}
+[/perl]
+&nbsp
+</TD>
+</TR>
+<TR>
+<TD BGCOLOR=#e6e6e6 COLSPAN=2>
+
+
+<TABLE BORDER=1 CELLPADDING=2 WIDTH=800 HEIGHT=480>
+<TR>
+<TD VALIGN=top>
+<BR>

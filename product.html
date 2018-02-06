@@ -1,0 +1,202 @@
+[include top]
+
+<A HREF=/cgi-bin/tools/content.cgi?content=product.html&request=Add>Add</A> |
+<A HREF=/cgi-bin/tools/content.cgi?content=product.html&request=Search>Search</A>
+<HR>
+<BR>
+
+<FORM>
+[perl]
+require FoodDB;
+require CGI::Tools;
+require CGI::Product;
+CGI::Product::setDB($FoodDB::dbh);
+
+# gets HTML of many products
+sub prodsHTML
+{
+   my ($rproducts, $rprices) = @_;
+   my($upc, $html);
+   
+   my $prod_count = keys %$rproducts;
+   $html = '<H2>' . $prod_count . ' products found.</H2>' if $prod_count > 1;
+   $html .= '<TABLE BORDER=1>' . "\n";
+   $html .= '<TD></TD>' . CGI::Product::prodHTML(undef, undef, undef, undef, 1); ## print header
+   foreach $upc (sort keys %$rproducts)
+   {
+      $html .= '<TR>', "\n";
+      $html .= '<TD><INPUT TYPE=radio NAME=UPC VALUE=' . $upc;
+      $html .= ' CHECKED' if $prod_count == 1;
+      $html .= '></TD>';
+      my($rprice);
+#      $$rprice{'UPC'} = $upc;
+      $rprice = $$rprices{$upc};
+      $html .= CGI::Product::prodHTML($$rproducts{$upc}, $rprice, $main::form, 1);
+      $html .= '</TR>', "\n";
+   }
+   $html .= '</TABLE>' . "\n";
+   $html .= '<INPUT TYPE=submit NAME=request VALUE=Edit>';
+   return $html;
+} # prodsHTML
+
+[/perl]
+[perl]
+
+########
+## start
+########
+   push(@INC, 'cgi-bin');
+
+   $main::form = ($main::q->param('request') eq 'Add' ||
+                  $main::q->param('request') eq 'Edit' ||
+                  $main::q->param('request') eq 'Search') ? 1 : 0;
+
+
+   my $prodHTML;
+   $prodHTML = '<H1>Add Product</H1>'
+               if $main::q->param('request') eq 'Add' ||
+                  $main::q->param('action') eq 'Add';
+
+   $prodHTML = '<H1>Edit Product</H1>'
+               if $main::q->param('request') eq 'Edit' ||
+                  $main::q->param('action') eq 'Update';
+
+   $prodHTML = '<H1>Search for Products</H1>'
+               if $main::q->param('request') eq 'Search';
+
+
+   my %product;
+   my %price;
+
+   my $rproducts;
+   my $rprices;
+   my $msg;
+
+   ## get them from param()
+   %product = % { CGI::Tools::hash_param(@DB::Product::fields) };
+   %price = % { CGI::Tools::hash_param(@DB::Price::fields) };
+   ## if not null key 'price' is empty then reset $rprice
+#   $rprice = undef if ! $$rprice{'price'}; why do I need to do that ?
+
+   ## if edit form or doing search then need to get product and price info
+   if ($main::q->param('request') eq 'Edit' ||
+       $main::q->param('action') eq 'Search')
+   {
+      $rproducts = DB::Product::get(%product);
+print $rproducts, "<BR>\n";
+      
+      ## if edit 
+      if ($main::q->param('request') eq 'Edit')
+      {
+         my @k = keys %$rproducts;
+print "K ", $k[0], "<BR>";
+         %product = %{$$rproducts{$k[0]}};
+         $price{'UPC'} = $product{'UPC'};
+         my $reprice = DB::Price::get(\%price);
+         %price = %$reprice if $reprice;
+      }
+      else
+      {
+         # get price info and
+         # filter out products that don't satisfy price search criteria, if any 
+         my %tmp_prods;
+         my $upc;
+         foreach $upc (keys %$rproducts)
+         {
+            $price{'UPC'} = $upc;
+            $$rprices{$upc} = DB::Price::get(\%price);
+            my $ok = 1;
+            if (%price && $price{'storeCode'})
+            {
+               $ok = 0 if $price{'storeCode'} ne $$rprices{$upc}{'storeCode'};
+            }
+            $tmp_prods{$upc} = $$rproducts{$upc} if $ok == 1;
+                                             
+         }
+         $rproducts = \%tmp_prods;
+      }
+   }
+
+   ## display product/form
+   if ($main::q->param('request') &&
+       ($main::q->param('request') eq 'Add' ||
+        $main::q->param('request') eq 'Edit' ||
+        $main::q->param('request') eq 'Search'))
+   {
+      $prodHTML .= CGI::Product::prodHTML(\%product, \%price, $main::form, 0);
+   }
+
+   ## handle add request, always first see if there are matching products
+   if ($main::q->param('action') && $main::q->param('action') eq 'Add')
+   {
+      ## if no UPC entered then match this product
+      ## with already existing products
+      $rproducts = DB::Product::get(%product);
+      if (keys %$rproducts != 0)
+      {
+         $prodHTML .= CGI::Product::prodHTML(\%product, \%price, $main::form);
+         $prodHTML .= '<H2>The above product may already exist :</H2>';
+         $prodHTML .= prodsHTML($rproducts, $rprices);
+      }
+      else
+      {
+         my $upc;
+         ($upc, $msg) = DB::Product::add(\%product);
+         if ($msg)
+         {
+            $prodHTML .= $msg;
+         }
+         else
+         {
+            ## just in case no upc is added and a PID is created
+            ## then use that PID returned from add()
+            $price{'UPC'} = $upc;
+            $product{'UPC'} = $upc;
+            DB::Price::add(\%price) if $price{'price'};
+            $prodHTML .= '<H2>Product Added Successfuly.</H2>';
+            $prodHTML .= CGI::Product::prodHTML(\%product, \%price, $main::form);
+            $prodHTML .= '<INPUT TYPE=submit NAME=request VALUE=Edit>';
+         }
+      }
+   }
+   elsif ($main::q->param('action') && $main::q->param('action') eq 'Update')
+   {
+      ## delete and add
+      my %del_prod;
+      $del_prod{'UPC'} = $main::q->param('edit_UPC');
+      my $rdel_prod = DB::Product::get(%del_prod);
+      DB::Product::del($$rdel_prod{(keys %$rdel_prod) [0]});
+      DB::Product::add(\%product);
+
+      if ($price{'price'})
+      {
+         my $rdel_price = DB::Price::get(\%del_prod);
+         DB::Price::del($rdel_price);
+         DB::Price::add(\%price);
+      }
+      else
+      {
+         $prodHTML .= '<H3>Warning : empty price.</H3>';
+      }
+      $prodHTML .= '<H2>Update Successful.</H2>';
+      $prodHTML .= CGI::Product::prodHTML(\%product, \%price, $main::form);
+      $prodHTML .= '<INPUT TYPE=submit NAME=request VALUE=Edit>';
+   }
+   elsif ($main::q->param('action') && $main::q->param('action') eq 'Search')
+   {
+#print "PRODS ", keys %$rproducts, '<BR>';
+      $prodHTML .= prodsHTML($rproducts, $rprices) if $rproducts && $rproducts != undef;
+   }
+
+   ## hide product info in case we need them next time
+   $prodHTML .= CGI::Tools::param_hash(\%product);
+   $prodHTML .= CGI::Tools::param_hash(\%price);
+
+   print $prodHTML;
+
+[/perl]
+
+<INPUT TYPE=hidden NAME=content VALUE=product.html>
+</FORM>
+
+[include bottom]

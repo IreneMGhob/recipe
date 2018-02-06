@@ -1,0 +1,59 @@
+[include top]
+
+
+<H1>Search</H1>
+
+<P>Only recipes that satisfy all selected criteria will be displayed.</P>
+
+[perl]
+
+   # just use the CGI Recipe handling package to handle request
+   push(@INC, './cgi-bin');
+   require FoodCGI::Recipe;
+   $main::html = FoodCGI::Recipe::handleRecipeRequest($main::q);
+
+   if ($main::html eq '')
+   {
+
+      ## get HTML for seach by ingredients 
+      my $slctHTML = FoodCGI::Recipe::ingredientSelectHTML();
+      
+      if ($slctHTML ne '')
+      {
+         $slctHTML = '<TABLE border=0 WIDTH=100%><TR><TD VALIGN=top ROWSPAN=2>' .
+                     '<H3>Choose Ingredients :</H3>' .
+                     '<INPUT TYPE=radio NAME=select VALUE=any CHECKED>Any' .
+                     '<INPUT TYPE=radio NAME=select VALUE=all>All<BR>' .
+                     $slctHTML;
+         $slctHTML .= '</TD><TD VALIGN=top>';
+      }
+      $slctHTML .= '<H3>Choose Categories :</H3>';
+
+      $slctHTML .= FoodCGI::Recipe::recipeCategorySelectHTML(2);
+      $slctHTML .= '</TD></TR><TR><TD><H3>Choose Country :</H3>';
+      $slctHTML .= FoodCGI::Recipe::countrySelectHTML() . '</TD></TR>';
+      $slctHTML .= '</TD></TR></TABLE>';
+
+$main::formHTML = <<'EOF_HTML';
+
+<FORM ACTION=/cgi-bin/tools/content.cgi>
+<H3>Recipe Name :</H3> <INPUT TYPE=text NAME=recipeName SIZE=40>
+<FONT CLASS=small>Enter part or all of recipe name.</FONT>
+<BR>
+<BR>
+EOF_HTML
+
+
+      print $main::formHTML;
+      print $slctHTML;
+      print '<INPUT TYPE="submit" NAME="get_recipes" VALUE="Get Recipes">';
+      ## need to add the hidden get_recipes because IE submits on <enter>
+      ## without sending the submit button info
+      print '<INPUT TYPE="hidden" NAME="get_recipes" VALUE="Get Recipes">';
+      print '<INPUT TYPE="hidden" NAME="content" VALUE="recipes.html">';
+      print '</FORM>';
+   }
+
+[/perl]
+
+[include bottom]

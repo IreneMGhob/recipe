@@ -1,0 +1,20 @@
+[include top]
+
+[perl]
+   push(@INC, 'cgi-bin');
+   require FoodDB;
+   require CGI::Login;
+   CGI::Login::setDB($FoodDB::dbh);
+
+   my $id = CGI::Login::getLoginId($main::q);
+   print "<H1>$id .... WELCOME ! </H1>";
+
+   my($rc) = CGI::Login::verify($main::q);
+   if ($rc == 2) # temp password
+   {
+      print 'If you would like to change your password, <A HREF=' .
+            '/cgi-bin/tools/content.cgi?content=login.html' .
+            '&change_password=now>click here</A>.';
+   }
+[/perl]
+[include bottom]

@@ -1,0 +1,21 @@
+[include top]
+
+
+<H1>Recipe Search Results</H1>
+[perl]
+
+   push(@INC, './cgi-bin');
+   require FoodCGI::Recipe;
+   $main::html = FoodCGI::Recipe::handleRecipeRequest($main::q);
+
+   print $main::html;
+
+## log searches
+   require tools::Log;
+   Log::setLogDir('./access');
+   Log::setLogFile('recipes.log');
+   Log::log($main::q->query_string());
+
+[/perl]
+
+[include bottom]

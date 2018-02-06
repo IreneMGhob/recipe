@@ -1,0 +1,102 @@
+[include top]
+
+<A HREF=/cgi-bin/tools/content.cgi?content=store.html&request=Add>Add</A>
+<HR>
+<BR>
+
+[perl]
+require FoodDB;
+require DB::Store;
+## specify DB where Store is stored
+DB::Store::make($FoodDB::dbh);
+require CGI::Tools;
+## specify CGI object we're working with (from content.cgi)
+CGI::Tools::cgi_object($main::q);
+
+## if there is a store in params get them
+$main::rStore = CGI::Tools::hash_param(@DB::Store::fields);
+
+sub storeHTML
+{
+   my($rstore, $row, $hdr) = @_;
+   my $html = CGI::Tools::table_field($row,
+              CGI::Tools::tf($main::form, 'name',
+                             $$rstore{'name'}, 20, 80), 'Name :');
+   $html .= CGI::Tools::table_field($row,
+            CGI::Tools::tf($main::form, 'description',
+                           $$rstore{'description'}, 50, 200), 'Description :');
+   $html .= CGI::Tools::table_field($row,
+            CGI::Tools::tf($main::form, 'city',
+                           $$rstore{'city'}, 30, 50), 'City :');
+   $html .= CGI::Tools::table_field($row,
+            CGI::Tools::tf($main::form, 'provinceCode',
+                           $$rstore{'provinceCode'}, 3, 2), 'Province :');
+   $html .= CGI::Tools::table_field($row,
+            CGI::Tools::tf($main::form, 'postalCode',
+                           $$rstore{'postalCode'}, 8, 8), 'Postal Code :');
+   $html .= CGI::Tools::table_field($row,
+            CGI::Tools::tf($main::form, 'internalCode',
+                           $$rstore{'internalCode'}, 5, 9), 'Internal Code :');
+   $html .= CGI::Tools::table_field($row,
+            CGI::Tools::sl($main::form, 'typeCode', 1, $$rstore{'typeCode'},
+                           \@main::store_type_codes,
+                                      \%main::store_types), 'Type :');
+   return $html;
+} # storeHTML()
+
+[/perl]
+
+
+<FORM>
+[perl]
+
+
+########
+## Main
+########
+my $storeHTML;
+my %store;
+
+## get types of stores
+%main::store_types = DB::Store::get_types();
+my $k;
+foreach $k (keys %main::store_types)
+{
+   push(@main::store_type_codes, $k);
+}
+
+if ($main::q->param('request') eq 'Add')
+{
+   $main::form = 1;
+   $storeHTML = '<H1>Add Store</H1>';
+   $storeHTML .= '<TABLE>', "\n";
+   $storeHTML .= storeHTML(\%store, 0);
+   $storeHTML .= '</TABLE>', "\n";
+   $storeHTML .= '<INPUT TYPE=submit NAME=action VALUE=Add>', "\n";
+}
+elsif ($main::q->param('action') eq 'Add')
+{
+   $storeHTML = '<H1>Add Store</H1>';
+
+   ## first check that this is not a duplicate
+   my $rStores = DB::Store::get($main::rStore);
+   if (keys %$rStores != 0)
+   {
+      $storeHTML .= '<H3>Store already exists.</H3>';
+   }
+   else
+   {
+      DB::Store::add($main::rStore);
+      $storeHTML .= '<H2>The following store was added successfuly.</H2>';
+   }
+   $storeHTML .= '<TABLE>', "\n";
+   $storeHTML .= storeHTML($main::rStore, 0);
+   $storeHTML .= '</TABLE>', "\n";
+}
+
+print $storeHTML;
+
+[/perl]
+<INPUT TYPE=hidden NAME=content VALUE=store.html>
+</FORM>
+[include bottom]
